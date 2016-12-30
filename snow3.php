@@ -9,7 +9,7 @@ Author URI: https://jackyu.cn/
 License: GPL2
 */
 
-/*  Copyright 年份  作者名  (email : 你的邮箱)
+/*  Copyright 2016 0xJacky
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
