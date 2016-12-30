@@ -1,8 +1,4 @@
 # Snow
-A WordPress Plugin
+WordPress 3D飘雪插件，移植 Snow（Typecho版本，原作者：清馨雅致）
 
-雪花特效插件，原插件作者是清馨雅致（Typecho）
-
-现在改写成 WordPress 版本
-
-目前为预览阶段，设置页面正在开发中
+设置页面已经制作完成，在线预览 https://jackyu.cn/
