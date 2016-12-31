@@ -10,7 +10,7 @@ https://uni9k.me/
 
 
 ###效果图
-![image](https://github.com/0xJacky/Snow3/blob/master/Snow3/screenshots/snow3index.png)
+![image](https://raw.githubusercontent.com/0xJacky/Snow3/master/screenshots/snow3index.png)
 
 ####设置页面
-![image](https://github.com/0xJacky/Snow3/blob/master/Snow3/screenshots/snow3settings.png)
+![image](https://raw.githubusercontent.com/0xJacky/Snow3/master/screenshots/snow3settings.png)
