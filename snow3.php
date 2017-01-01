@@ -2,14 +2,14 @@
 /*
 Plugin Name: Snow3
 Plugin URI: https://jackyu.cn/projects/snow3
-Description: 3D效果的飘雪插件，移植Typecho版 Snow（作者：清馨雅致）
+Description: 3D效果的飘雪插件，移植 Typecho 版 Snow（作者：清馨雅致）
 Version: 1.1
 Author: Jacky
 Author URI: https://jackyu.cn/
 License: GPL2
 */
 
-/*  Copyright 2016 0xJacky
+/*  Copyright 2017  0xJacky  (email : me@jackyu.cm)
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -37,6 +37,7 @@ function snow3_settings() {
 
 function register_snow3_settings() {
   register_setting('snow3_options', 'snow3_jquery');
+  register_setting('snow3_options', 'snow3_load');
   register_setting('snow3_options', 'snow3_style');
   register_setting('snow3_options', 'snow3_way');
   register_setting('snow3_options', 'snow3_speed');
@@ -49,6 +50,7 @@ function register_snow3_settings() {
 
 function snow3_settings_page() {
   $jquery = is_numeric(get_option('snow3_jquery')) ? esc_attr(get_option('snow3_jquery')) : 0;
+  $load = is_numeric(get_option('snow3_load')) ? esc_attr(get_option('snow3_load')) : 0;
   $style = is_numeric(get_option('snow3_style')) ? esc_attr(get_option('snow3_style')) : 1;
   $way = is_numeric(get_option('snow3_way')) ? esc_attr(get_option('snow3_way')) : 0;
   $speed = is_numeric(get_option('snow3_speed')) ? esc_attr(get_option('snow3_speed')) : 1;
@@ -68,7 +70,18 @@ function snow3_settings_page() {
       <legend>jQuery 加载方式</legend>
       <input type="radio" name="snow3_jquery" value="0" <?php echo checked( 0, $jquery, false); ?>/>手动加载
       <input type="radio" name="snow3_jquery" value="1" <?php echo checked( 1, $jquery, false); ?>/>自动加载
-      <p>"手动加载"需要你手动加载jQuery到主题(如果主题已经加载了jQuery请选择手动加载),若选择"自动加载",插件会自动加载jQuery到主题里。</font></p>
+      <p>"手动加载"需要你手动加载jQuery到主题(如果主题已经加载了jQuery请选择手动加载),若选择"自动加载",插件会自动加载jQuery到主题里。</p>
+    </fieldset>
+    <fieldset>
+      <legend>插件加载方式</legend>
+      <input type="radio" name="snow3_load" value="0" <?php echo checked( 0, $load, false); ?>/>自动加载
+      <input type="radio" name="snow3_load" value="1" <?php echo checked( 1, $load, false); ?>/>手动加载
+      <p>选择手动加载,
+      请添加函数到需要加载的页面文件，例如 single.php，将函数放置在<span style="padding: 2px 4px;color: #00A7EB;background-color: #fbfbfb;border: 1px solid #e1e1e8;white-space: nowrap;margin: 0 5px;letter-spacing: 0.015em">add_snow_style();</span>
+      置于<span style="padding: 2px 4px;color: #00A7EB;background-color: #fbfbfb;border: 1px solid #e1e1e8;white-space: nowrap;margin: 0 5px;letter-spacing: 0.015em">get_header();</span>
+      的上方。并将<span style="padding: 2px 4px;color: #00A7EB;background-color: #fbfbfb;border: 1px solid #e1e1e8;white-space: nowrap;margin: 0 5px;letter-spacing: 0.015em">&lt;?php snow3();?&gt;</span>
+      置于<span style="padding: 2px 4px;color: #00A7EB;background-color: #fbfbfb;border: 1px solid #e1e1e8;white-space: nowrap;margin: 0 5px;letter-spacing: 0.015em">&lt;?php wp_footer();?&gt;</span> 的上方。
+      <br />当使用自动加载时，手动加载函数将会返回空值。</p>
     </fieldset>
     <fieldset>
       <legend>雪花样式</legend>
@@ -129,7 +142,6 @@ function add_snow_style() {
   wp_enqueue_style('SnowCSS');
   wp_enqueue_script('jqueryJS');
 }
-add_action( 'wp_enqueue_scripts', 'add_snow_style' );
 
 function add_snow_script() {
   $style = is_numeric(get_option('snow3_style')) ? esc_attr(get_option('snow3_style')) : 1;
@@ -159,5 +171,16 @@ function add_snow_script() {
 
   echo $snowjs;
 }
-add_action( 'wp_footer', 'add_snow_script' );
+$load = is_numeric(get_option('snow3_load')) ? esc_attr(get_option('snow3_load')) : 0;
+if ( $load == 0 ) {
+  add_action( 'wp_enqueue_scripts', 'add_snow_style' );
+  add_action( 'wp_footer', 'add_snow_script' );
+}
+
+function snow3() {
+  $load = is_numeric(get_option('snow3_load')) ? esc_attr(get_option('snow3_load')) : 0;
+  	if ( $load == 1 ){
+    echo add_snow_script();
+  }
+}
 ?>
