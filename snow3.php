@@ -3,7 +3,11 @@
 Plugin Name: Snow3
 Plugin URI: https://jackyu.cn/projects/snow3
 Description: 3D效果的飘雪插件，移植 Typecho 版 Snow（作者：清馨雅致）
+<<<<<<< HEAD
 Version: 1.2
+=======
+Version: 1.1
+>>>>>>> origin/master
 Author: Jacky
 Author URI: https://jackyu.cn/
 License: GPL2
