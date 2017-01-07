@@ -3,11 +3,7 @@
 Plugin Name: Snow3
 Plugin URI: https://jackyu.cn/projects/snow3
 Description: 3D效果的飘雪插件，移植 Typecho 版 Snow（作者：清馨雅致）
-<<<<<<< HEAD
 Version: 1.2
-=======
-Version: 1.1
->>>>>>> origin/master
 Author: Jacky
 Author URI: https://jackyu.cn/
 License: GPL2
@@ -30,6 +26,9 @@ License: GPL2
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+register_deactivation_hook( __FILE__, 'snow3_remove' ); //注册卸载时执行的函数
+
+/* 创建设置入口 */
 add_action('admin_menu', 'snow3_settings');
 
 function snow3_settings() {
@@ -39,6 +38,7 @@ function snow3_settings() {
   add_action( 'admin_init', 'register_snow3_settings' );
 }
 
+/* 注册设置项（SettingsKit） */
 function register_snow3_settings() {
   register_setting('snow3_options', 'snow3_jquery');
   register_setting('snow3_options', 'snow3_load');
@@ -52,6 +52,7 @@ function register_snow3_settings() {
   register_setting('snow3_options', 'snow3_num');
 }
 
+/* 插件设置页面 */
 function snow3_settings_page() {
   $jquery = is_numeric(get_option('snow3_jquery')) ? esc_attr(get_option('snow3_jquery')) : 0;
   $load = is_numeric(get_option('snow3_load')) ? esc_attr(get_option('snow3_load')) : 0;
@@ -135,6 +136,7 @@ function snow3_settings_page() {
 <?php
 }
 
+/* 载入 CSS JS 文件 */
 function add_snow_style() {
   $jquery = is_numeric(get_option('snow3_jquery')) ? esc_attr(get_option('snow3_jquery')) : 0;
   wp_register_style( 'SnowCSS', plugins_url('css/Snow.css', __FILE__) );
@@ -147,6 +149,7 @@ function add_snow_style() {
   wp_enqueue_script('jqueryJS');
 }
 
+/* 载入 Snow3 */
 function add_snow_script() {
   $style = is_numeric(get_option('snow3_style')) ? esc_attr(get_option('snow3_style')) : 1;
   $way = is_numeric(get_option('snow3_way')) ? esc_attr(get_option('snow3_way')) : 0;
@@ -157,34 +160,41 @@ function add_snow_script() {
   $gravity = is_numeric(get_option('snow3_gravity')) ? esc_attr(get_option('snow3_gravity')) : 0;
   $num = is_numeric(get_option('snow3_num')) ? esc_attr(get_option('snow3_num')) : 500;
 
-  $options = array(
-            'snowstyle'  => $style,
-            'snowway'    => $way,
-            'snowspeed' => $speed,
-            'snowfront' => $front,
-            'snowrotateX' => $rotateX,
-            'snowrotateY' => $rotateY,
-            'snowgravity' => $gravity,
-            'snownum' => $num
-        );
   $imgUrl = plugins_url('img/Snow'.$style.'.png', __FILE__);
   $snowjs = '<script type="text/javascript">';
-  $snowjs .= 'function randomRange(t,i){return Math.random()*(i-t)+t}Particle3D=function(t){THREE.Particle.call(this,t),this.velocity=new THREE.Vector3('.$options['snowway'].',-'.$options['snowspeed'].','.$options['snowfront'].'),this.velocity.rotateX(randomRange(-'.$options['snowrotateX'].','.$options['snowrotateX'].')),this.velocity.rotateY(randomRange(0,'.$options['snowrotateY'].')),this.gravity=new THREE.Vector3(0,-'.$options['snowgravity'].',0),this.drag=1},Particle3D.prototype=new THREE.Particle,Particle3D.prototype.constructor=Particle3D,Particle3D.prototype.updatePhysics=function(){this.velocity.multiplyScalar(this.drag),this.velocity.addSelf(this.gravity),this.position.addSelf(this.velocity)};var TO_RADIANS=Math.PI/180;THREE.Vector3.prototype.rotateY=function(t){cosRY=Math.cos(t*TO_RADIANS),sinRY=Math.sin(t*TO_RADIANS);var i=this.z,o=this.x;this.x=o*cosRY+i*sinRY,this.z=o*-sinRY+i*cosRY},THREE.Vector3.prototype.rotateX=function(t){cosRY=Math.cos(t*TO_RADIANS),sinRY=Math.sin(t*TO_RADIANS);var i=this.z,o=this.y;this.y=o*cosRY+i*sinRY,this.z=o*-sinRY+i*cosRY},THREE.Vector3.prototype.rotateZ=function(t){cosRY=Math.cos(t*TO_RADIANS),sinRY=Math.sin(t*TO_RADIANS);var i=this.x,o=this.y;this.y=o*cosRY+i*sinRY,this.x=o*-sinRY+i*cosRY};$(function(){var container=document.querySelector(".Snow");if(/MSIE 6|MSIE 7|MSIE 8/.test(navigator.userAgent)){return}else{if(/MSIE 9|MSIE 10/.test(navigator.userAgent)){$(container).css("height",$(window).height()).bind("click",function(){$(this).fadeOut(1000,function(){$(this).remove()})})}}var containerWidth=$(container).width();var containerHeight=$(container).height();var particle;var camera;var scene;var renderer;var mouseX=0;var mouseY=0;var windowHalfX=window.innerWidth/2;var windowHalfY=window.innerHeight/2;var particles=[];var particleImage=new Image();particleImage.src="'.$imgUrl.'";';
-  $snowjs .= 'var snowNum='.$options['snownum'].';function init(){camera=new THREE.PerspectiveCamera(75,containerWidth/containerHeight,1,10000);camera.position.z=1000;scene=new THREE.Scene();scene.add(camera);renderer=new THREE.CanvasRenderer();renderer.setSize(containerWidth,containerHeight);var material=new THREE.ParticleBasicMaterial({map:new THREE.Texture(particleImage)});for(var i=0;i<snowNum;i++){particle=new Particle3D(material);particle.position.x=Math.random()*2000-1000;particle.position.y=Math.random()*2000-1000;particle.position.z=Math.random()*2000-1000;particle.scale.x=particle.scale.y=1;scene.add(particle);particles.push(particle)}container.appendChild(renderer.domElement);document.addEventListener("mousemove",onDocumentMouseMove,false);setInterval(loop,1000/40)}function onDocumentMouseMove(event){mouseX=event.clientX-windowHalfX;mouseY=event.clientY-windowHalfY}function loop(){for(var i=0;i<particles.length;i++){var particle=particles[i];particle.updatePhysics();with(particle.position){if(y<-1000){y+=2000}if(x>1000){x-=2000}else{if(x<-1000){x+=2000}}if(z>1000){z-=2000}else{if(z<-1000){z+=2000}}}}camera.position.x+=(mouseX-camera.position.x)*0.005;camera.position.y+=(-mouseY-camera.position.y)*0.005;camera.lookAt(scene.position);renderer.render(scene,camera)}init()});</script>';
+  $snowjs .= 'function randomRange(t,i){return Math.random()*(i-t)+t}Particle3D=function(t){THREE.Particle.call(this,t),this.velocity=new THREE.Vector3('.$way.',-'.$speed.','.$front.'),this.velocity.rotateX(randomRange(-'.$rotateX.','.$rotateX.')),this.velocity.rotateY(randomRange(0,'.$rotateY.')),this.gravity=new THREE.Vector3(0,-'.$gravity.',0),this.drag=1},Particle3D.prototype=new THREE.Particle,Particle3D.prototype.constructor=Particle3D,Particle3D.prototype.updatePhysics=function(){this.velocity.multiplyScalar(this.drag),this.velocity.addSelf(this.gravity),this.position.addSelf(this.velocity)};var TO_RADIANS=Math.PI/180;THREE.Vector3.prototype.rotateY=function(t){cosRY=Math.cos(t*TO_RADIANS),sinRY=Math.sin(t*TO_RADIANS);var i=this.z,o=this.x;this.x=o*cosRY+i*sinRY,this.z=o*-sinRY+i*cosRY},THREE.Vector3.prototype.rotateX=function(t){cosRY=Math.cos(t*TO_RADIANS),sinRY=Math.sin(t*TO_RADIANS);var i=this.z,o=this.y;this.y=o*cosRY+i*sinRY,this.z=o*-sinRY+i*cosRY},THREE.Vector3.prototype.rotateZ=function(t){cosRY=Math.cos(t*TO_RADIANS),sinRY=Math.sin(t*TO_RADIANS);var i=this.x,o=this.y;this.y=o*cosRY+i*sinRY,this.x=o*-sinRY+i*cosRY};$(function(){var container=document.querySelector(".Snow");if(/MSIE 6|MSIE 7|MSIE 8/.test(navigator.userAgent)){return}else{if(/MSIE 9|MSIE 10/.test(navigator.userAgent)){$(container).css("height",$(window).height()).bind("click",function(){$(this).fadeOut(1000,function(){$(this).remove()})})}}var containerWidth=$(container).width();var containerHeight=$(container).height();var particle;var camera;var scene;var renderer;var mouseX=0;var mouseY=0;var windowHalfX=window.innerWidth/2;var windowHalfY=window.innerHeight/2;var particles=[];var particleImage=new Image();particleImage.src="'.$imgUrl.'";';
+  $snowjs .= 'var snowNum='.$num.';function init(){camera=new THREE.PerspectiveCamera(75,containerWidth/containerHeight,1,10000);camera.position.z=1000;scene=new THREE.Scene();scene.add(camera);renderer=new THREE.CanvasRenderer();renderer.setSize(containerWidth,containerHeight);var material=new THREE.ParticleBasicMaterial({map:new THREE.Texture(particleImage)});for(var i=0;i<snowNum;i++){particle=new Particle3D(material);particle.position.x=Math.random()*2000-1000;particle.position.y=Math.random()*2000-1000;particle.position.z=Math.random()*2000-1000;particle.scale.x=particle.scale.y=1;scene.add(particle);particles.push(particle)}container.appendChild(renderer.domElement);document.addEventListener("mousemove",onDocumentMouseMove,false);setInterval(loop,1000/40)}function onDocumentMouseMove(event){mouseX=event.clientX-windowHalfX;mouseY=event.clientY-windowHalfY}function loop(){for(var i=0;i<particles.length;i++){var particle=particles[i];particle.updatePhysics();with(particle.position){if(y<-1000){y+=2000}if(x>1000){x-=2000}else{if(x<-1000){x+=2000}}if(z>1000){z-=2000}else{if(z<-1000){z+=2000}}}}camera.position.x+=(mouseX-camera.position.x)*0.005;camera.position.y+=(-mouseY-camera.position.y)*0.005;camera.lookAt(scene.position);renderer.render(scene,camera)}init()});</script>';
   $snowjs .= '<div class="Snow"></div>';
 
   echo $snowjs;
 }
+
+/* 插件加载方式 */
 $load = is_numeric(get_option('snow3_load')) ? esc_attr(get_option('snow3_load')) : 0;
 if ( $load == 0 ) {
   add_action( 'wp_enqueue_scripts', 'add_snow_style' );
   add_action( 'wp_footer', 'add_snow_script' );
 }
 
+/* 手动加载 */
 function snow3() {
   $load = is_numeric(get_option('snow3_load')) ? esc_attr(get_option('snow3_load')) : 0;
   	if ( $load == 1 ){
     echo add_snow_script();
   }
+}
+
+/* 插件卸载时执行的函数 */
+function snow3_remove() {
+  delete_option('snow3_jquery');
+  delete_option('snow3_load');
+  delete_option('snow3_style');
+  delete_option('snow3_way');
+  delete_option('snow3_speed');
+  delete_option('snow3_front');
+  delete_option('snow3_rotateX');
+  delete_option('snow3_rotateY');
+  delete_option('snow3_gravity');
+  delete_option('snow3_num');
 }
 ?>
