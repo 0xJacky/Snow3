@@ -3,7 +3,8 @@ name: CI and release
 on:
   push:
     branches: [main]
-    tags: ['v*']
+    # Version tags, as in the existing 1.1.1 / 1.2 history; a leading v is also accepted.
+    tags: ['[0-9]*', 'v[0-9]*']
   pull_request:
 
 permissions:
@@ -43,7 +44,7 @@ jobs:
         run: python3 scripts/package.py dist
 
   release:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/')
     needs: test
     runs-on: ubuntu-latest
     permissions:
