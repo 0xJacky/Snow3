@@ -1,0 +1,52 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><title>Snow3 性能基准</title>
+<style>body{font:16px system-ui;color:#ecf3f6;background:#26323b;margin:32px}button{font:inherit;padding:10px 20px}table{border-collapse:collapse;margin:24px 0}td,th{padding:12px;border:1px solid #687d89;text-align:right}iframe{display:block;width:1280px;height:720px;border:0}pre{white-space:pre-wrap}</style></head><body>
+<h1>Snow3 性能基准</h1><p>固定随机种子、纹理和 1280×720 视口，按 60 Hz 时间线模拟 10 秒（400 次物理步）。“主线程”是动画回调累计耗时；“含光栅”在每次绘制后读回 1 像素，强制完成 GPU 光栅，数值包含读回开销，只适合同一台机器上前后对比。</p>
+<button id="run">运行基准</button><p id="status" role="status">等待运行</p><div id="table"></div><pre id="results"></pre><iframe title="性能测试画布"></iframe>
+<script>
+(function () {
+    const frame = document.querySelector('iframe'), status = document.getElementById('status');
+    const base = new URL('../', location.href).href;
+    const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+    async function load() {
+        const loaded = new Promise(resolve => frame.addEventListener('load', resolve, {once: true}));
+        frame.srcdoc = '<!doctype html><html><head><base href="' + base + '"><link rel="stylesheet" href="css/Snow.css"></head><body style="margin:0;background:#26323b"><div class="Snow"></div><script>window.testFrames=new Map();window.nextFrame=0;window.requestAnimationFrame=fn=>{testFrames.set(++nextFrame,fn);return nextFrame};window.cancelAnimationFrame=id=>testFrames.delete(id);<\/script><script src="js/snow3.js?' + Date.now() + '"><\/script></body></html>';
+        await loaded;
+        return frame.contentWindow;
+    }
+    async function trial(num, flush) {
+        const w = await load();
+        let seed = 42; w.Math.random = () => ((seed = (1664525 * seed + 1013904223) >>> 0) / 4294967296);
+        const snow = w.Snow3.create(w.document.querySelector('.Snow'), {num, style: 2, speed: 1, texture: new URL('../img/Snow2.png', location.href).href});
+        for (let tries = 0; !snow.sprite; tries++) { if (tries > 400) throw Error('texture timeout'); await sleep(5); }
+        const context = snow.canvas.getContext('2d');
+        const advance = time => { const frames = [...w.testFrames.values()]; w.testFrames.clear(); frames.forEach(fn => fn(time)); };
+        for (let i = 0; i < 30; i++) advance(i * 1000 / 60);
+        let renders = 0; const render = snow.render.bind(snow);
+        snow.render = () => { renders++; render(); if (flush) context.getImageData(0, 0, 1, 1); };
+        const start = performance.now();
+        for (let i = 30; i < 630; i++) advance(i * 1000 / 60);
+        context.getImageData(0, 0, 1, 1);
+        const ms = performance.now() - start, canvas = snow.canvas.width + '×' + snow.canvas.height;
+        snow.destroy();
+        return {num, flush, renders, canvas, perRenderMs: +(ms / renders).toFixed(3)};
+    }
+    document.getElementById('run').addEventListener('click', async () => {
+        document.getElementById('run').disabled = true;
+        const rows = [];
+        try {
+            for (const num of [500, 2000]) for (const flush of [false, true]) {
+                const runs = [];
+                for (let repeat = 0; repeat < 5; repeat++) {
+                    status.textContent = '测试 ' + num + ' 片 / ' + (flush ? '含光栅' : '主线程') + ' / 第 ' + (repeat + 1) + ' 轮';
+                    runs.push(await trial(num, flush));
+                }
+                runs.sort((a, b) => a.perRenderMs - b.perRenderMs); rows.push(runs[2]);
+            }
+            document.getElementById('table').innerHTML = '<table><tr><th>雪花</th><th>测量</th><th>画布</th><th>绘制次数</th><th>每次绘制中位数 ms</th></tr>' + rows.map(r => '<tr><td>' + r.num + '</td><td>' + (r.flush ? '含光栅' : '主线程') + '</td><td>' + r.canvas + '</td><td>' + r.renders + '</td><td>' + r.perRenderMs + '</td></tr>').join('') + '</table>';
+            document.getElementById('results').textContent = JSON.stringify({userAgent: navigator.userAgent, devicePixelRatio, median: rows}, null, 2);
+            status.textContent = '完成';
+        } catch (error) { status.textContent = '失败：' + error.message; }
+        document.getElementById('run').disabled = false;
+    });
+})();
+</script></body></html>

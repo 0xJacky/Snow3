@@ -1,0 +1,73 @@
+name: CI and release
+
+on:
+  push:
+    branches: [master]
+    tags: ['v*']
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # Lowest supported version (plugin header) and the newest one.
+        php: ['7.4', '8.4']
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          coverage: none
+
+      - name: JavaScript runtime tests
+        run: node --test tests/snow3.test.cjs
+
+      - name: PHP syntax
+        run: for f in snow3.php uninstall.php includes/options.php; do php -l "$f"; done
+
+      - name: PHP contract tests
+        run: |
+          php tests/plugin.php manual
+          php tests/plugin.php auto
+
+      - name: Package
+        run: python3 scripts/package.py dist
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # The tag, plugin header, asset version and JS runtime version must agree,
+      # otherwise browsers and CDNs keep serving a cached build.
+      - name: Check version
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          header=$(sed -n 's/^ \* Version: *//p' snow3.php)
+          asset=$(sed -n "s/^define('SNOW3_VERSION', '\(.*\)');/\1/p" snow3.php)
+          runtime=$(sed -n "s/.*version: '\([0-9.]*\)'.*/\1/p" js/snow3.js)
+          echo "tag=$tag header=$header asset=$asset runtime=$runtime"
+          test "$tag" = "$header" && test "$tag" = "$asset" && test "$tag" = "$runtime"
+
+      - name: Package
+        run: python3 scripts/package.py dist
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/Snow3-*.zip dist/SHA256SUMS \
+            --title "Snow3 ${GITHUB_REF_NAME#v}" --generate-notes --verify-tag

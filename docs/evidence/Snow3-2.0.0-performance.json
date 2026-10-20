@@ -1,0 +1,327 @@
+{
+  "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36",
+  "median": [
+    {
+      "version": "2.0.0",
+      "num": 500,
+      "hz": 60,
+      "canvas": "2560×1440",
+      "renders": 60,
+      "updates": 40,
+      "workMs": 10.3,
+      "variant": "before"
+    },
+    {
+      "version": "2.0.0",
+      "num": 500,
+      "hz": 60,
+      "canvas": "2560×1440",
+      "renders": 40,
+      "updates": 40,
+      "workMs": 7.4,
+      "variant": "after"
+    },
+    {
+      "version": "2.0.0",
+      "num": 500,
+      "hz": 120,
+      "canvas": "2560×1440",
+      "renders": 120,
+      "updates": 40,
+      "workMs": 22,
+      "variant": "before"
+    },
+    {
+      "version": "2.0.0",
+      "num": 500,
+      "hz": 120,
+      "canvas": "2560×1440",
+      "renders": 40,
+      "updates": 40,
+      "workMs": 11.7,
+      "variant": "after"
+    },
+    {
+      "version": "2.0.0",
+      "num": 2000,
+      "hz": 60,
+      "canvas": "2560×1440",
+      "renders": 60,
+      "updates": 40,
+      "workMs": 27.8,
+      "variant": "before"
+    },
+    {
+      "version": "2.0.0",
+      "num": 2000,
+      "hz": 60,
+      "canvas": "2560×1440",
+      "renders": 40,
+      "updates": 40,
+      "workMs": 14.4,
+      "variant": "after"
+    },
+    {
+      "version": "2.0.0",
+      "num": 2000,
+      "hz": 120,
+      "canvas": "2560×1440",
+      "renders": 120,
+      "updates": 40,
+      "workMs": 44.3,
+      "variant": "before"
+    },
+    {
+      "version": "2.0.0",
+      "num": 2000,
+      "hz": 120,
+      "canvas": "2560×1440",
+      "renders": 40,
+      "updates": 40,
+      "workMs": 15.9,
+      "variant": "after"
+    }
+  ],
+  "trials": [
+    {
+      "version": "2.0.0",
+      "num": 500,
+      "hz": 60,
+      "canvas": "2560×1440",
+      "renders": 60,
+      "updates": 40,
+      "workMs": 10.3,
+      "variant": "before"
+    },
+    {
+      "version": "2.0.0",
+      "num": 500,
+      "hz": 60,
+      "canvas": "2560×1440",
+      "renders": 40,
+      "updates": 40,
+      "workMs": 10.3,
+      "variant": "after"
+    },
+    {
+      "version": "2.0.0",
+      "num": 500,
+      "hz": 60,
+      "canvas": "2560×1440",
+      "renders": 40,
+      "updates": 40,
+      "workMs": 7.4,
+      "variant": "after"
+    },
+    {
+      "version": "2.0.0",
+      "num": 500,
+      "hz": 60,
+      "canvas": "2560×1440",
+      "renders": 60,
+      "updates": 40,
+      "workMs": 9.4,
+      "variant": "before"
+    },
+    {
+      "version": "2.0.0",
+      "num": 500,
+      "hz": 60,
+      "canvas": "2560×1440",
+      "renders": 60,
+      "updates": 40,
+      "workMs": 10.5,
+      "variant": "before"
+    },
+    {
+      "version": "2.0.0",
+      "num": 500,
+      "hz": 60,
+      "canvas": "2560×1440",
+      "renders": 40,
+      "updates": 40,
+      "workMs": 6.1,
+      "variant": "after"
+    },
+    {
+      "version": "2.0.0",
+      "num": 500,
+      "hz": 120,
+      "canvas": "2560×1440",
+      "renders": 120,
+      "updates": 40,
+      "workMs": 23.3,
+      "variant": "before"
+    },
+    {
+      "version": "2.0.0",
+      "num": 500,
+      "hz": 120,
+      "canvas": "2560×1440",
+      "renders": 40,
+      "updates": 40,
+      "workMs": 14.4,
+      "variant": "after"
+    },
+    {
+      "version": "2.0.0",
+      "num": 500,
+      "hz": 120,
+      "canvas": "2560×1440",
+      "renders": 40,
+      "updates": 40,
+      "workMs": 11.7,
+      "variant": "after"
+    },
+    {
+      "version": "2.0.0",
+      "num": 500,
+      "hz": 120,
+      "canvas": "2560×1440",
+      "renders": 120,
+      "updates": 40,
+      "workMs": 22,
+      "variant": "before"
+    },
+    {
+      "version": "2.0.0",
+      "num": 500,
+      "hz": 120,
+      "canvas": "2560×1440",
+      "renders": 120,
+      "updates": 40,
+      "workMs": 20.3,
+      "variant": "before"
+    },
+    {
+      "version": "2.0.0",
+      "num": 500,
+      "hz": 120,
+      "canvas": "2560×1440",
+      "renders": 40,
+      "updates": 40,
+      "workMs": 7.7,
+      "variant": "after"
+    },
+    {
+      "version": "2.0.0",
+      "num": 2000,
+      "hz": 60,
+      "canvas": "2560×1440",
+      "renders": 60,
+      "updates": 40,
+      "workMs": 27.8,
+      "variant": "before"
+    },
+    {
+      "version": "2.0.0",
+      "num": 2000,
+      "hz": 60,
+      "canvas": "2560×1440",
+      "renders": 40,
+      "updates": 40,
+      "workMs": 17.6,
+      "variant": "after"
+    },
+    {
+      "version": "2.0.0",
+      "num": 2000,
+      "hz": 60,
+      "canvas": "2560×1440",
+      "renders": 40,
+      "updates": 40,
+      "workMs": 14.4,
+      "variant": "after"
+    },
+    {
+      "version": "2.0.0",
+      "num": 2000,
+      "hz": 60,
+      "canvas": "2560×1440",
+      "renders": 60,
+      "updates": 40,
+      "workMs": 25,
+      "variant": "before"
+    },
+    {
+      "version": "2.0.0",
+      "num": 2000,
+      "hz": 60,
+      "canvas": "2560×1440",
+      "renders": 60,
+      "updates": 40,
+      "workMs": 28.8,
+      "variant": "before"
+    },
+    {
+      "version": "2.0.0",
+      "num": 2000,
+      "hz": 60,
+      "canvas": "2560×1440",
+      "renders": 40,
+      "updates": 40,
+      "workMs": 13.8,
+      "variant": "after"
+    },
+    {
+      "version": "2.0.0",
+      "num": 2000,
+      "hz": 120,
+      "canvas": "2560×1440",
+      "renders": 120,
+      "updates": 40,
+      "workMs": 55,
+      "variant": "before"
+    },
+    {
+      "version": "2.0.0",
+      "num": 2000,
+      "hz": 120,
+      "canvas": "2560×1440",
+      "renders": 40,
+      "updates": 40,
+      "workMs": 16.4,
+      "variant": "after"
+    },
+    {
+      "version": "2.0.0",
+      "num": 2000,
+      "hz": 120,
+      "canvas": "2560×1440",
+      "renders": 40,
+      "updates": 40,
+      "workMs": 14.6,
+      "variant": "after"
+    },
+    {
+      "version": "2.0.0",
+      "num": 2000,
+      "hz": 120,
+      "canvas": "2560×1440",
+      "renders": 120,
+      "updates": 40,
+      "workMs": 41.7,
+      "variant": "before"
+    },
+    {
+      "version": "2.0.0",
+      "num": 2000,
+      "hz": 120,
+      "canvas": "2560×1440",
+      "renders": 120,
+      "updates": 40,
+      "workMs": 44.3,
+      "variant": "before"
+    },
+    {
+      "version": "2.0.0",
+      "num": 2000,
+      "hz": 120,
+      "canvas": "2560×1440",
+      "renders": 40,
+      "updates": 40,
+      "workMs": 15.9,
+      "variant": "after"
+    }
+  ]
+}

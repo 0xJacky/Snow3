@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Snow3 · 本地预览</title>
+    <link rel="stylesheet" href="../css/Snow.css">
+    <style>
+        :root { color-scheme: dark; font-family: system-ui, sans-serif; }
+        * { box-sizing: border-box; }
+        body { margin: 0; background: #28353e; color: #edf2f4; min-height: 100vh; }
+        main { max-width: 1100px; margin: auto; padding: 8vh 32px; }
+        .eyebrow { color: #c6d8df; font-size: 14px; letter-spacing: .15em; }
+        h1 { font-size: clamp(44px, 8vw, 88px); letter-spacing: -.05em; margin: 20px 0; }
+        .intro { max-width: 550px; line-height: 1.8; color: #d1dbe0; }
+        form { margin-top: 48px; border-top: 1px solid #64727b; padding: 28px 0; max-width: 650px; }
+        .fields { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+        label { display: block; font-size: 14px; }
+        input, select, button { font: inherit; color: inherit; background: #1e2b34; border: 1px solid #839099; border-radius: 4px; padding: 10px; }
+        input, select { display: block; width: 100%; margin-top: 8px; }
+        button { margin: 24px 8px 0 0; cursor: pointer; }
+        button[type=submit] { background: #e9f0f3; color: #1e2b34; }
+        :focus-visible { outline: 3px solid #9edbef; outline-offset: 4px; }
+        #status { line-height: 1.8; color: #d1dbe0; font-size: 14px; }
+        footer { margin-top: 30px; color: #b5c4cc; font-size: 13px; }
+        a { color: inherit; }
+        @media(max-width: 600px) { main { padding: 32px 20px; } .fields { grid-template-columns: repeat(2, 1fr); } }
+    </style>
+</head>
+<body>
+<main>
+    <p class="eyebrow">SNOW3 / 2.0.0</p>
+    <h1>让雪慢慢落下。</h1>
+    <p class="intro">保留原版的两种雪花纹理、景深和鼠标视差。调整参数即可预览；雪花不会遮挡按钮或文字选择。</p>
+    <form id="controls">
+        <div class="fields">
+            <label>雪花样式<select name="style"><option value="1">圆形 3D</option><option value="2" selected>不规则 3D</option></select></label>
+            <label>雪花数量<input name="num" type="number" value="500" min="0" max="2000" step="1"></label>
+            <label>下降速度<input name="speed" type="number" value="0.5" min="0" max="1000" step="any"></label>
+            <label>水平速度<input name="way" type="number" value="0" min="-1000" max="1000" step="any"></label>
+            <label>纵深速度<input name="front" type="number" value="0" min="-1000" max="1000" step="any"></label>
+            <label>重力加速度<input name="gravity" type="number" value="0" min="-1" max="1" step="any"></label>
+            <label>X 轴旋转<input name="rotateX" type="number" value="45" min="-360" max="360" step="any"></label>
+            <label>Y 轴旋转<input name="rotateY" type="number" value="360" min="-360" max="360" step="any"></label>
+        </div>
+        <button type="submit">应用参数</button><button type="button" id="toggle">暂停飘雪</button><button type="reset">恢复默认</button>
+        <p id="status" role="status"></p>
+    </form>
+    <footer>已应用参数在当前标签页刷新后保留 · <a href="../../../../">WordPress 测试首页</a> · 尊重系统“减少动态效果”设置</footer>
+</main>
+<div class="Snow" id="snow-preview" aria-hidden="true"></div>
+<script src="../js/snow3.js?ver=2.0.0"></script>
+<script>
+(function () {
+    'use strict';
+    const root = document.getElementById('snow-preview');
+    const form = document.getElementById('controls');
+    const toggle = document.getElementById('toggle');
+    const status = document.getElementById('status');
+    const motion = matchMedia('(prefers-reduced-motion: reduce)');
+    const storageKey = 'snow3-preview-options';
+    // Keep applied demo parameters across a code reload in the same tab.
+    // WordPress settings continue to be managed separately by WordPress.
+    try {
+        const saved = JSON.parse(sessionStorage.getItem(storageKey));
+        for (const field of form.elements) {
+            if (!field.name || !saved || !Object.prototype.hasOwnProperty.call(saved, field.name)) continue;
+            const value = Number(saved[field.name]);
+            if (!Number.isFinite(value)) continue;
+            if (field.name === 'style' && value !== 1 && value !== 2) continue;
+            if (field.type === 'number' && (value < Number(field.min) || value > Number(field.max))) continue;
+            field.value = String(value);
+        }
+    } catch (_) { /* Storage may be disabled; preview still works. */ }
+    let snow = null;
+    let paused = false;
+    function apply() {
+        if (snow) snow.destroy();
+        const options = Object.fromEntries(new FormData(form));
+        try { sessionStorage.setItem(storageKey, JSON.stringify(options)); }
+        catch (_) { /* Storage is optional. */ }
+        options.texture = new URL('../img/Snow' + options.style + '.png', location.href).href;
+        snow = paused ? null : Snow3.create(root, options);
+        toggle.textContent = paused ? '继续飘雪' : '暂停飘雪';
+        status.textContent = paused ? '已暂停。' : motion.matches ? '系统已启用减少动态效果，飘雪已暂停。' : '当前 ' + options.num + ' 片雪花，移动鼠标可观察景深变化。';
+    }
+    form.addEventListener('submit', event => { event.preventDefault(); apply(); });
+    form.addEventListener('reset', () => setTimeout(apply, 0));
+    toggle.addEventListener('click', () => { paused = !paused; apply(); });
+    motion.addEventListener('change', apply);
+    apply();
+})();
+</script>
+</body>
+</html>

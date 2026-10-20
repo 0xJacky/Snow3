@@ -1,200 +1,208 @@
 <?php
-/*
-Plugin Name: Snow3
-Plugin URI: https://jackyu.cn/projects/snow3
-Description: 3D效果的飘雪插件，移植 Typecho 版 Snow（作者：清馨雅致）
-Version: 1.2
-Author: Jacky
-Author URI: https://jackyu.cn/
-License: GPL2
-*/
+/**
+ * Plugin Name: Snow3
+ * Plugin URI: https://github.com/0xJacky/Snow3
+ * Description: 无需 jQuery 或 Three.js 的 3D 飘雪效果，保留原版设置和主题调用接口。
+ * Version: 2.0.0
+ * Author: Jacky
+ * Author URI: https://jackyu.cn/
+ * License: GPL-2.0-or-later
+ * License URI: https://www.gnu.org/licenses/gpl-2.0.html
+ * Text Domain: snow3
+ * Domain Path: /languages
+ * Requires at least: 5.8
+ * Requires PHP: 7.4
+ */
 
-/*  Copyright 2017  0xJacky  (email : me@jackyu.cm)
+if (!defined('ABSPATH')) {
+    exit;
+}
 
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation; either version 2 of the License, or
-    (at your option) any later version.
+/** Cache-busting version for every enqueued asset; keep in sync with the header above. */
+define('SNOW3_VERSION', '2.0.0');
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+require_once __DIR__ . '/includes/options.php';
 
-    You should have received a copy of the GNU General Public License
-    along with this program; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-*/
+/** Reject non-numeric/non-finite input; clamp numeric values to supported bounds. */
+function snow3_sanitize_option($key, $value) {
+    $schema = snow3_option_schema();
+    if (!isset($schema[$key])) {
+        return null;
+    }
+    $rule = $schema[$key];
+    if ((!is_string($value) && !is_int($value) && !is_float($value)) || !is_numeric($value)) {
+        return $rule['default'];
+    }
+    $number = (float) $value;
+    if (!is_finite($number)) {
+        return $rule['default'];
+    }
+    if (isset($rule['enum']) && !in_array($number, $rule['enum'], false)) {
+        return $rule['default'];
+    }
+    $number = max($rule['min'], min($rule['max'], $number));
+    return !empty($rule['integer']) ? (int) round($number) : $number;
+}
 
-register_deactivation_hook( __FILE__, 'snow3_remove' ); //注册卸载时执行的函数
+/** Validate reads too, so old or directly edited options never enter markup unchecked. */
+function snow3_get_option($key) {
+    $schema = snow3_option_schema();
+    if (!isset($schema[$key])) {
+        return null;
+    }
+    return snow3_sanitize_option($key, get_option('snow3_' . $key, $schema[$key]['default']));
+}
 
-/* 创建设置入口 */
+/** A count of 0 turns snow off, so no assets or container are emitted at all. */
+function snow3_is_enabled() {
+    return snow3_get_option('num') > 0;
+}
+
+add_action('init', 'snow3_load_textdomain');
+add_action('admin_init', 'register_snow3_settings');
 add_action('admin_menu', 'snow3_settings');
+add_action('wp_enqueue_scripts', 'snow3_enqueue_automatic');
+// Render before WordPress prints footer scripts, including when invoked late by a template.
+add_action('wp_footer', 'snow3_render_automatic', 5);
 
-function snow3_settings() {
-  //create new top-level menu
-  add_menu_page('Snow3', 'Snow3', 'administrator', __FILE__, 'snow3_settings_page');
-  //call register settings function
-  add_action( 'admin_init', 'register_snow3_settings' );
+function snow3_load_textdomain() {
+    load_plugin_textdomain('snow3', false, dirname(plugin_basename(__FILE__)) . '/languages');
 }
 
-/* 注册设置项（SettingsKit） */
 function register_snow3_settings() {
-  register_setting('snow3_options', 'snow3_jquery');
-  register_setting('snow3_options', 'snow3_load');
-  register_setting('snow3_options', 'snow3_style');
-  register_setting('snow3_options', 'snow3_way');
-  register_setting('snow3_options', 'snow3_speed');
-  register_setting('snow3_options', 'snow3_front');
-  register_setting('snow3_options', 'snow3_rotateX');
-  register_setting('snow3_options', 'snow3_rotateY');
-  register_setting('snow3_options', 'snow3_gravity');
-  register_setting('snow3_options', 'snow3_num');
+    foreach (snow3_option_schema() as $key => $rule) {
+        register_setting('snow3_options', 'snow3_' . $key, array(
+            'type' => !empty($rule['integer']) ? 'integer' : 'number',
+            'default' => $rule['default'],
+            'sanitize_callback' => function ($value) use ($key) {
+                return snow3_sanitize_option($key, $value);
+            },
+        ));
+    }
 }
 
-/* 插件设置页面 */
+/**
+ * Top-level menu, as in 1.x. Pages under Settings get "Settings saved" printed by
+ * options-head.php above the title, which common.js then moves below it, so the
+ * notice visibly jumps; here the page prints it in its final place instead.
+ */
+function snow3_settings() {
+    add_menu_page(__('Snow3 飘雪设置', 'snow3'), 'Snow3', 'manage_options', 'snow3', 'snow3_settings_page', 'dashicons-cloud');
+}
+
 function snow3_settings_page() {
-  $jquery = is_numeric(get_option('snow3_jquery')) ? esc_attr(get_option('snow3_jquery')) : 0;
-  $load = is_numeric(get_option('snow3_load')) ? esc_attr(get_option('snow3_load')) : 0;
-  $style = is_numeric(get_option('snow3_style')) ? esc_attr(get_option('snow3_style')) : 1;
-  $way = is_numeric(get_option('snow3_way')) ? esc_attr(get_option('snow3_way')) : 0;
-  $speed = is_numeric(get_option('snow3_speed')) ? esc_attr(get_option('snow3_speed')) : 1;
-  $front = is_numeric(get_option('snow3_front')) ? esc_attr(get_option('snow3_front')) : 0;
-  $rotateX = is_numeric(get_option('snow3_rotateX')) ? esc_attr(get_option('snow3_rotateX')) : 45;
-  $rotateY = is_numeric(get_option('snow3_rotateY')) ? esc_attr(get_option('snow3_rotateY')) : 360;
-  $gravity = is_numeric(get_option('snow3_gravity')) ? esc_attr(get_option('snow3_gravity')) : 0;
-  $num = is_numeric(get_option('snow3_num')) ? esc_attr(get_option('snow3_num')) : 500;
-?>
-<div class="wrap" style="margin: 10px">
-  <h1>Snow3 飘雪设置</h1>
-  <form method="post" action="options.php">
-    <?php settings_fields( 'snow3_options' ); ?>
-    <?php do_settings_sections( 'snow3_options' ); ?>
-    <hr>
-    <fieldset>
-      <legend>jQuery 加载方式</legend>
-      <input type="radio" name="snow3_jquery" value="0" <?php echo checked( 0, $jquery, false); ?>/>手动加载
-      <input type="radio" name="snow3_jquery" value="1" <?php echo checked( 1, $jquery, false); ?>/>自动加载
-      <p>"手动加载"需要你手动加载jQuery到主题(如果主题已经加载了jQuery请选择手动加载),若选择"自动加载",插件会自动加载jQuery到主题里。</p>
-    </fieldset>
-    <fieldset>
-      <legend>插件加载方式</legend>
-      <input type="radio" name="snow3_load" value="0" <?php echo checked( 0, $load, false); ?>/>自动加载
-      <input type="radio" name="snow3_load" value="1" <?php echo checked( 1, $load, false); ?>/>手动加载
-      <p>选择手动加载,
-      请添加函数到需要加载的页面文件，例如 single.php，将函数放置在<span style="padding: 2px 4px;color: #00A7EB;background-color: #fbfbfb;border: 1px solid #e1e1e8;white-space: nowrap;margin: 0 5px;letter-spacing: 0.015em">add_snow_style();</span>
-      置于<span style="padding: 2px 4px;color: #00A7EB;background-color: #fbfbfb;border: 1px solid #e1e1e8;white-space: nowrap;margin: 0 5px;letter-spacing: 0.015em">get_header();</span>
-      的上方。并将<span style="padding: 2px 4px;color: #00A7EB;background-color: #fbfbfb;border: 1px solid #e1e1e8;white-space: nowrap;margin: 0 5px;letter-spacing: 0.015em">&lt;?php snow3();?&gt;</span>
-      置于<span style="padding: 2px 4px;color: #00A7EB;background-color: #fbfbfb;border: 1px solid #e1e1e8;white-space: nowrap;margin: 0 5px;letter-spacing: 0.015em">&lt;?php wp_footer();?&gt;</span> 的上方。
-      <br />当使用自动加载时，手动加载函数将会返回空值。</p>
-    </fieldset>
-    <fieldset>
-      <legend>雪花样式</legend>
-      <input type="radio" name="snow3_style" value="1" <?php echo checked( 1, $style, false); ?>/>圆形3D风格
-      <input type="radio" name="snow3_style" value="2" <?php echo checked( 2, $style, false); ?>/>不规则3D风格
-    </fieldset>
-    <fieldset>
-      <legend>雪花方向</legend>
-      <input type="text" name="snow3_way" value="<?php echo $way; ?>" />
-      <p>雪花飘动方向，填写数值，正值从左向右飘，加“-”号从右向左飘。<font color="#F40">注意：默认为 0，即向向下飘动。数值越大，速度越快。</font></p>
-    </fieldset>
-    <fieldset>
-      <legend>雪花速度</legend>
-      <input type="text" name="snow3_speed" value="<?php echo $speed; ?>" />
-      <p>建议1~10，数值越大雪花速度越快，<font color="#F40">注意：太大的数值使得雪花速度太快将无法看到雪花，建议不超过1000，测试最大速度为2800。</font></p>
-    </fieldset>
-    <br>
-    <fieldset>
-      <legend>雪花方向</legend>
-      <input type="text" name="snow3_front" value="<?php echo $front; ?>" />
-      <p>雪花飘动方向为正面朝向，填写数值，正值从屏幕内朝向屏幕飘，加“-”号反之。<font color="#F40">注意：默认为 0，数值越大，速度越快。</font></p>
-    </fieldset>
-    <fieldset>
-      <legend>雪花X轴旋转</legend>
-      <input type="text" name="snow3_rotateX" value="<?php echo $rotateX; ?>" />
-      <p>雪花X轴旋转 <font color="#F40">注意：默认为 45。</font></p>
-    </fieldset>
-    <fieldset>
-      <legend>雪花Y轴旋转</legend>
-      <input type="text" name="snow3_rotateY" value="<?php echo $rotateY; ?>" />
-      <P>雪花Y轴旋转 <font color="#F40">注意：默认为 360。</font></P>
-    </fieldset>
-    <fieldset>
-      <legend>雪花重力加速度</legend>
-      <input type="text" name="snow3_gravity" value="<?php echo $gravity; ?>" />
-      <P>雪花下降的重力加速度，<font color="#F40">建议数值在0.5以下。默认为 0。</font></P>
-    </fieldset>
-    <fieldset>
-      <legend>雪花数量</legend>
-      <input type="text" name="snow3_num" value="<?php echo $num; ?>" />
-      <p>当前屏幕中显示的雪花数量，数值越大雪花数量越多，<font color="#F40">注意：建议不要太多，以免影响访问速度和增加内存消耗。默认为 500。</font></p>
-    </fieldset>
-    <hr>
-    <?php submit_button(); ?>
-  </form>
-</div>
-<?php
+    if (!current_user_can('manage_options')) {
+        return;
+    }
+    $schema = snow3_option_schema();
+    $fields = array(
+        'way' => array(__('水平速度', 'snow3'), __('正值向右、负值向左。', 'snow3')),
+        'speed' => array(__('下降速度', 'snow3'), __('数值越大，下落越快。', 'snow3')),
+        'front' => array(__('纵深速度', 'snow3'), __('正值朝向屏幕、负值远离屏幕。', 'snow3')),
+        'rotateX' => array(__('X 轴旋转', 'snow3'), __('初始速度绕 X 轴的随机旋转范围，单位为度。', 'snow3')),
+        'rotateY' => array(__('Y 轴旋转', 'snow3'), __('初始速度绕 Y 轴的随机旋转范围，单位为度。', 'snow3')),
+        'gravity' => array(__('重力加速度', 'snow3'), __('正值向下、负值向上；建议绝对值小于 0.5。', 'snow3')),
+        'num' => array(__('雪花数量', 'snow3'), __('0 表示关闭飘雪，较少的雪花更省电。', 'snow3')),
+    );
+    ?>
+    <div class="wrap">
+        <h1><?php esc_html_e('Snow3 飘雪设置', 'snow3'); ?></h1>
+        <hr class="wp-header-end">
+        <?php settings_errors(); ?>
+        <p><?php esc_html_e('使用原生 Canvas 绘制，无需加载 jQuery 或 Three.js。旧版 jQuery 选项会保留，但不再影响运行。', 'snow3'); ?></p>
+        <form method="post" action="options.php">
+            <?php settings_fields('snow3_options'); ?>
+            <table class="form-table" role="presentation">
+                <tr>
+                    <th scope="row"><?php esc_html_e('加载方式', 'snow3'); ?></th>
+                    <td><fieldset><legend class="screen-reader-text"><?php esc_html_e('加载方式', 'snow3'); ?></legend>
+                        <label for="snow3-load-auto"><input id="snow3-load-auto" type="radio" name="snow3_load" value="0" <?php checked(snow3_get_option('load'), 0); ?>> <?php esc_html_e('自动加载', 'snow3'); ?></label><br>
+                        <label for="snow3-load-manual"><input id="snow3-load-manual" type="radio" name="snow3_load" value="1" <?php checked(snow3_get_option('load'), 1); ?>> <?php esc_html_e('手动加载', 'snow3'); ?></label>
+                        <p class="description"><?php
+                            echo wp_kses(
+                                __('手动模式：在主题调用 <code>get_header()</code> 前调用 <code>add_snow_style();</code>，在 <code>wp_footer()</code> 前调用 <code>snow3();</code>。也支持原来的 <code>add_snow_script();</code> 接口；同一页面重复调用只会创建一个飘雪层。', 'snow3'),
+                                array('code' => array())
+                            );
+                        ?></p>
+                    </fieldset></td>
+                </tr>
+                <tr>
+                    <th scope="row"><?php esc_html_e('雪花样式', 'snow3'); ?></th>
+                    <td><fieldset><legend class="screen-reader-text"><?php esc_html_e('雪花样式', 'snow3'); ?></legend>
+                        <label for="snow3-style-round"><input id="snow3-style-round" type="radio" name="snow3_style" value="1" <?php checked(snow3_get_option('style'), 1); ?>> <?php esc_html_e('圆形 3D 风格', 'snow3'); ?></label><br>
+                        <label for="snow3-style-flake"><input id="snow3-style-flake" type="radio" name="snow3_style" value="2" <?php checked(snow3_get_option('style'), 2); ?>> <?php esc_html_e('不规则 3D 风格', 'snow3'); ?></label>
+                    </fieldset></td>
+                </tr>
+                <?php foreach ($fields as $key => $field) : ?>
+                    <?php
+                    $rule = $schema[$key];
+                    /* translators: 1: default value, 2: minimum, 3: maximum. */
+                    $range = sprintf(__('默认 %1$s。范围 %2$s 至 %3$s。', 'snow3'), $rule['default'], $rule['min'], $rule['max']);
+                    ?>
+                    <tr>
+                        <th scope="row"><label for="snow3-<?php echo esc_attr($key); ?>"><?php echo esc_html($field[0]); ?></label></th>
+                        <td>
+                            <input class="small-text" id="snow3-<?php echo esc_attr($key); ?>" type="number" name="snow3_<?php echo esc_attr($key); ?>" value="<?php echo esc_attr(snow3_get_option($key)); ?>" min="<?php echo esc_attr($rule['min']); ?>" max="<?php echo esc_attr($rule['max']); ?>" step="<?php echo !empty($rule['integer']) ? '1' : 'any'; ?>" aria-describedby="snow3-<?php echo esc_attr($key); ?>-help">
+                            <p class="description" id="snow3-<?php echo esc_attr($key); ?>-help"><?php echo esc_html($field[1] . $range); ?></p>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            </table>
+            <p><?php esc_html_e('动画会遵循访客的“减少动态效果”偏好，并在页面不可见时暂停。', 'snow3'); ?></p>
+            <?php submit_button(); ?>
+        </form>
+    </div>
+    <?php
 }
 
-/* 载入 CSS JS 文件 */
+/** Legacy public template API: enqueue both assets once through WordPress. */
 function add_snow_style() {
-  $jquery = is_numeric(get_option('snow3_jquery')) ? esc_attr(get_option('snow3_jquery')) : 0;
-  wp_register_style( 'SnowCSS', plugins_url('css/Snow.css', __FILE__) );
-  if ( $jquery ) {
-  wp_register_script( 'jqueryJS', '//cdn.bootcss.com/jquery/3.1.1/jquery.min.js' );
-  }
-  wp_register_script( 'SnowJS', plugins_url('js/three.js', __FILE__) );
-  wp_enqueue_script('SnowJS');
-  wp_enqueue_style('SnowCSS');
-  wp_enqueue_script('jqueryJS');
+    if (!snow3_is_enabled()) {
+        return;
+    }
+    // A few hundred bytes of inline CSS beat a render-blocking stylesheet request.
+    if (!wp_style_is('SnowCSS', 'registered')) {
+        wp_register_style('SnowCSS', false, array(), SNOW3_VERSION);
+        wp_add_inline_style('SnowCSS', (string) file_get_contents(__DIR__ . '/css/Snow.css'));
+    }
+    wp_enqueue_style('SnowCSS');
+    // WordPress < 6.3 reads the array as a truthy $in_footer and ignores the strategy.
+    wp_enqueue_script('SnowJS', plugins_url('js/snow3.js', __FILE__), array(), SNOW3_VERSION, array('in_footer' => true, 'strategy' => 'defer'));
 }
 
-/* 载入 Snow3 */
+function snow3_enqueue_automatic() {
+    if (snow3_get_option('load') === 0) {
+        add_snow_style();
+    }
+}
+
+function snow3_render_automatic() {
+    if (snow3_get_option('load') === 0) {
+        add_snow_script();
+    }
+}
+
+/** Legacy public template API: a single declarative container, with no executable inline JS. */
 function add_snow_script() {
-  $style = is_numeric(get_option('snow3_style')) ? esc_attr(get_option('snow3_style')) : 1;
-  $way = is_numeric(get_option('snow3_way')) ? esc_attr(get_option('snow3_way')) : 0;
-  $speed = is_numeric(get_option('snow3_speed')) ? esc_attr(get_option('snow3_speed')) : 1;
-  $front = is_numeric(get_option('snow3_front')) ? esc_attr(get_option('snow3_front')) : 0;
-  $rotateX = is_numeric(get_option('snow3_rotateX')) ? esc_attr(get_option('snow3_rotateX')) : 45;
-  $rotateY = is_numeric(get_option('snow3_rotateY')) ? esc_attr(get_option('snow3_rotateY')) : 360;
-  $gravity = is_numeric(get_option('snow3_gravity')) ? esc_attr(get_option('snow3_gravity')) : 0;
-  $num = is_numeric(get_option('snow3_num')) ? esc_attr(get_option('snow3_num')) : 500;
-
-  $imgUrl = plugins_url('img/Snow'.$style.'.png', __FILE__);
-  $snowjs = '<script type="text/javascript">';
-  $snowjs .= 'function randomRange(t,i){return Math.random()*(i-t)+t}Particle3D=function(t){THREE.Particle.call(this,t),this.velocity=new THREE.Vector3('.$way.',-'.$speed.','.$front.'),this.velocity.rotateX(randomRange(-'.$rotateX.','.$rotateX.')),this.velocity.rotateY(randomRange(0,'.$rotateY.')),this.gravity=new THREE.Vector3(0,-'.$gravity.',0),this.drag=1},Particle3D.prototype=new THREE.Particle,Particle3D.prototype.constructor=Particle3D,Particle3D.prototype.updatePhysics=function(){this.velocity.multiplyScalar(this.drag),this.velocity.addSelf(this.gravity),this.position.addSelf(this.velocity)};var TO_RADIANS=Math.PI/180;THREE.Vector3.prototype.rotateY=function(t){cosRY=Math.cos(t*TO_RADIANS),sinRY=Math.sin(t*TO_RADIANS);var i=this.z,o=this.x;this.x=o*cosRY+i*sinRY,this.z=o*-sinRY+i*cosRY},THREE.Vector3.prototype.rotateX=function(t){cosRY=Math.cos(t*TO_RADIANS),sinRY=Math.sin(t*TO_RADIANS);var i=this.z,o=this.y;this.y=o*cosRY+i*sinRY,this.z=o*-sinRY+i*cosRY},THREE.Vector3.prototype.rotateZ=function(t){cosRY=Math.cos(t*TO_RADIANS),sinRY=Math.sin(t*TO_RADIANS);var i=this.x,o=this.y;this.y=o*cosRY+i*sinRY,this.x=o*-sinRY+i*cosRY};$(function(){var container=document.querySelector(".Snow");if(/MSIE 6|MSIE 7|MSIE 8/.test(navigator.userAgent)){return}else{if(/MSIE 9|MSIE 10/.test(navigator.userAgent)){$(container).css("height",$(window).height()).bind("click",function(){$(this).fadeOut(1000,function(){$(this).remove()})})}}var containerWidth=$(container).width();var containerHeight=$(container).height();var particle;var camera;var scene;var renderer;var mouseX=0;var mouseY=0;var windowHalfX=window.innerWidth/2;var windowHalfY=window.innerHeight/2;var particles=[];var particleImage=new Image();particleImage.src="'.$imgUrl.'";';
-  $snowjs .= 'var snowNum='.$num.';function init(){camera=new THREE.PerspectiveCamera(75,containerWidth/containerHeight,1,10000);camera.position.z=1000;scene=new THREE.Scene();scene.add(camera);renderer=new THREE.CanvasRenderer();renderer.setSize(containerWidth,containerHeight);var material=new THREE.ParticleBasicMaterial({map:new THREE.Texture(particleImage)});for(var i=0;i<snowNum;i++){particle=new Particle3D(material);particle.position.x=Math.random()*2000-1000;particle.position.y=Math.random()*2000-1000;particle.position.z=Math.random()*2000-1000;particle.scale.x=particle.scale.y=1;scene.add(particle);particles.push(particle)}container.appendChild(renderer.domElement);document.addEventListener("mousemove",onDocumentMouseMove,false);setInterval(loop,1000/40)}function onDocumentMouseMove(event){mouseX=event.clientX-windowHalfX;mouseY=event.clientY-windowHalfY}function loop(){for(var i=0;i<particles.length;i++){var particle=particles[i];particle.updatePhysics();with(particle.position){if(y<-1000){y+=2000}if(x>1000){x-=2000}else{if(x<-1000){x+=2000}}if(z>1000){z-=2000}else{if(z<-1000){z+=2000}}}}camera.position.x+=(mouseX-camera.position.x)*0.005;camera.position.y+=(-mouseY-camera.position.y)*0.005;camera.lookAt(scene.position);renderer.render(scene,camera)}init()});</script>';
-  $snowjs .= '<div class="Snow"></div>';
-
-  echo $snowjs;
+    static $rendered = false;
+    if ($rendered || !snow3_is_enabled()) {
+        return;
+    }
+    $rendered = true;
+    add_snow_style();
+    $config = array();
+    foreach (array_keys(snow3_option_schema()) as $key) {
+        if ($key !== 'load') {
+            $config[$key] = snow3_get_option($key);
+        }
+    }
+    $config['texture'] = plugins_url('img/Snow' . $config['style'] . '.png', __FILE__);
+    echo '<div class="Snow" data-snow3="' . esc_attr(wp_json_encode($config)) . '" aria-hidden="true"></div>';
 }
 
-/* 插件加载方式 */
-$load = is_numeric(get_option('snow3_load')) ? esc_attr(get_option('snow3_load')) : 0;
-if ( $load == 0 ) {
-  add_action( 'wp_enqueue_scripts', 'add_snow_style' );
-  add_action( 'wp_footer', 'add_snow_script' );
-}
-
-/* 手动加载 */
+/** Preserve manual-mode behavior for existing themes. */
 function snow3() {
-  $load = is_numeric(get_option('snow3_load')) ? esc_attr(get_option('snow3_load')) : 0;
-  	if ( $load == 1 ){
-    echo add_snow_script();
-  }
+    if (snow3_get_option('load') === 1) {
+        add_snow_script();
+    }
 }
-
-/* 插件卸载时执行的函数 */
-function snow3_remove() {
-  delete_option('snow3_jquery');
-  delete_option('snow3_load');
-  delete_option('snow3_style');
-  delete_option('snow3_way');
-  delete_option('snow3_speed');
-  delete_option('snow3_front');
-  delete_option('snow3_rotateX');
-  delete_option('snow3_rotateY');
-  delete_option('snow3_gravity');
-  delete_option('snow3_num');
-}
-?>

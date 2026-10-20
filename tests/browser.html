@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Snow3 browser regression</title>
+<style>body{font:16px system-ui;background:#24313a;color:#fff;padding:24px}iframe{display:block;border:1px solid #888;width:640px;height:360px}li{line-height:1.8}.pass{color:#9de5b5}.fail{color:#ffb0a5}</style></head>
+<body><h1>Snow3 browser regression</h1><p id="summary" role="status">Running…</p><ol id="results"></ol><iframe title="Snow3 rendering fixture"></iframe>
+<script>
+(async function () {
+    const results = document.getElementById('results'); let passed = 0;
+    function check(condition, message) { const item = document.createElement('li'); item.className = condition ? 'pass' : 'fail'; item.textContent = (condition ? 'PASS ' : 'FAIL ') + message; results.append(item); if (!condition) throw Error(message); passed++; }
+    const frame = document.querySelector('iframe');
+    const loaded = new Promise(resolve => frame.addEventListener('load', resolve, {once:true}));
+    const base = new URL('../', location.href).href;
+    frame.srcdoc = '<!doctype html><html><head><base href="' + base + '"><link rel="stylesheet" href="css/Snow.css"><style>body{background:#24313a}</style></head><body><div class="Snow" style="display:none" data-snow3=\'{"num":500,"style":2,"texture":"' + new URL('../img/Snow2.png', location.href).href + '"}\'></div><script>window.testMotion=new EventTarget();testMotion.matches=true;window.matchMedia=()=>testMotion;<\/script><script src="js/snow3.js"><\/script></body></html>';
+    try {
+        await loaded;
+        const w = frame.contentWindow, doc = frame.contentDocument;
+        const root = doc.querySelector('.Snow'), snow = w.Snow3.create(root);
+        check(w.Snow3.version === '2.0.0', 'loads optimized runtime 2.0.0');
+        check(!w.jQuery && !w.THREE && !w.$, 'runs without jQuery, THREE or global $');
+        await new Promise((resolve, reject) => { let count = 0; const poll = () => snow.sprite ? resolve() : ++count > 120 ? reject(Error('texture timeout')) : requestAnimationFrame(poll); poll(); });
+        check(snow.frame === null && snow.canvas.hidden, 'initial reduced motion starts no animation');
+        root.style.display = ''; w.testMotion.matches = false; w.testMotion.dispatchEvent(new Event('change'));
+        await new Promise(resolve => w.requestAnimationFrame(() => w.requestAnimationFrame(resolve)));
+        check(!snow.canvas.hidden && snow.width === 640, 'motion preference can resume from initially hidden layout');
+        const pixels = snow.context.getImageData(0, 0, snow.canvas.width, snow.canvas.height).data;
+        check(pixels.some((value,index) => index % 4 === 3 && value > 0), 'actual Canvas paints nontransparent snow pixels');
+        check(getComputedStyle(root).pointerEvents === 'none', 'overlay allows pointer events through');
+        w.Snow3.scan(); w.Snow3.scan();
+        check(root.querySelectorAll('canvas').length === 1, 'repeat scanning creates one canvas');
+        frame.style.width = '390px'; frame.style.height = '844px';
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        check(snow.width === 390 && snow.height === 844, 'real iframe viewport resize updates portrait canvas');
+        w.testMotion.matches = true; w.testMotion.dispatchEvent(new Event('change'));
+        check(snow.frame === null && snow.canvas.hidden, 'runtime reduced motion cancels animation');
+        snow.destroy();
+        check(root.querySelectorAll('canvas').length === 0 && snow.particles.length === 0, 'destroy releases canvas and particle storage');
+        document.getElementById('summary').textContent = passed + ' browser checks passed';
+    } catch (error) { document.getElementById('summary').textContent = 'FAILED: ' + error.message; }
+})();
+</script></body></html>

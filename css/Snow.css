@@ -1,9 +1,24 @@
-.Snow{
-  position: fixed;
-  top: 0; 
-  left: 0; 
-  width: 100%; 
-  height: 100%; 
-  pointer-events: none; 
-  z-index: 100001;
-}  
+.Snow {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 100001;
+    contain: strict;
+}
+
+.Snow canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+.Snow canvas[hidden] { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+    .Snow { display: none; }
+}
